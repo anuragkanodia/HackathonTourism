@@ -3,7 +3,9 @@ package com.example.lenovo.hackathontourism;
 import android.animation.Animator;
 import android.animation.AnimatorListenerAdapter;
 import android.annotation.TargetApi;
+import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.support.annotation.NonNull;
 import android.support.design.widget.Snackbar;
@@ -20,6 +22,7 @@ import android.os.Build;
 import android.os.Bundle;
 import android.provider.ContactsContract;
 import android.text.TextUtils;
+import android.util.Log;
 import android.view.KeyEvent;
 import android.view.View;
 import android.view.View.OnClickListener;
@@ -29,11 +32,24 @@ import android.widget.AutoCompleteTextView;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.TextView;
+import android.widget.Toast;
+
+import com.android.volley.AuthFailureError;
+import com.android.volley.Request;
+import com.android.volley.RequestQueue;
+import com.android.volley.Response;
+import com.android.volley.VolleyError;
+import com.android.volley.toolbox.StringRequest;
+import com.android.volley.toolbox.Volley;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import static android.Manifest.permission.READ_CONTACTS;
+import static com.example.lenovo.hackathontourism.LoginActivity.UserLoginTask.LOGGEDIN_SHARED_PREF;
+import static com.example.lenovo.hackathontourism.LoginActivity.UserLoginTask.SHARED_PREF_NAME;
 
 /**
  * A login screen that offers login via email/password.
@@ -46,13 +62,6 @@ public class LoginActivity extends AppCompatActivity implements LoaderCallbacks<
     private static final int REQUEST_READ_CONTACTS = 0;
 
     /**
-     * A dummy authentication store containing known user names and passwords.
-     * TODO: remove after connecting to a real authentication system.
-     */
-    private static final String[] DUMMY_CREDENTIALS = new String[]{
-            "foo@example.com:hello", "bar@example.com:world"
-    };
-    /**
      * Keep track of the login task to ensure we can cancel it if requested.
      */
     private UserLoginTask mAuthTask = null;
@@ -62,11 +71,19 @@ public class LoginActivity extends AppCompatActivity implements LoaderCallbacks<
     private EditText mPasswordView;
     private View mProgressView;
     private View mLoginFormView;
+    private boolean loggedIn=false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_login);
+
+        SharedPreferences sharedPreferences = getSharedPreferences(SHARED_PREF_NAME,Context.MODE_PRIVATE);
+        loggedIn = sharedPreferences.getBoolean(LOGGEDIN_SHARED_PREF, false);
+        if(loggedIn){
+            Intent intent = new Intent(LoginActivity.this, FirstActivity.class);
+            startActivity(intent);
+        }
         // Set up the login form.
         mEmailView = (AutoCompleteTextView) findViewById(R.id.email);
         populateAutoComplete();
@@ -84,15 +101,25 @@ public class LoginActivity extends AppCompatActivity implements LoaderCallbacks<
         });
 
         Button mEmailSignInButton = (Button) findViewById(R.id.email_sign_in_button);
+        Button mContinueWithoutLogin = (Button) findViewById(R.id.continue_without_login);
+        Button mRegisterButton = (Button) findViewById(R.id.register);
+        mLoginFormView = findViewById(R.id.login_form);
+        mProgressView = findViewById(R.id.login_progress);
+
         mEmailSignInButton.setOnClickListener(new OnClickListener() {
             @Override
             public void onClick(View view) {
                 attemptLogin();
             }
         });
-        Button mContinueWithoutLogin = (Button) findViewById(R.id.continue_without_login);
-        mLoginFormView = findViewById(R.id.login_form);
-        mProgressView = findViewById(R.id.login_progress);
+
+        mRegisterButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Intent intentRegister=new Intent(LoginActivity.this,RegisterActivity.class);
+                startActivity(intentRegister);
+            }
+        });
 
         mContinueWithoutLogin.setOnClickListener(new View.OnClickListener() {
 
@@ -102,6 +129,8 @@ public class LoginActivity extends AppCompatActivity implements LoaderCallbacks<
                 startActivity(home);
             }
         });
+
+
     }
 
     private void populateAutoComplete() {
@@ -182,10 +211,6 @@ public class LoginActivity extends AppCompatActivity implements LoaderCallbacks<
             mEmailView.setError(getString(R.string.error_field_required));
             focusView = mEmailView;
             cancel = true;
-        } else if (!isEmailValid(email)) {
-            mEmailView.setError(getString(R.string.error_invalid_email));
-            focusView = mEmailView;
-            cancel = true;
         }
 
         if (cancel) {
@@ -199,11 +224,6 @@ public class LoginActivity extends AppCompatActivity implements LoaderCallbacks<
             mAuthTask = new UserLoginTask(email, password);
             mAuthTask.execute((Void) null);
         }
-    }
-
-    private boolean isEmailValid(String email) {
-        //TODO: Replace this with your own logic
-        return email.contains("@");
     }
 
     private boolean isPasswordValid(String password) {
@@ -307,6 +327,14 @@ public class LoginActivity extends AppCompatActivity implements LoaderCallbacks<
      */
     public class UserLoginTask extends AsyncTask<Void, Void, Boolean> {
 
+
+        public static final String LOGIN_URL="https://scienceakk.000webhostapp.com/php/login.php";
+        public static final String KEY_EMAIL="email";
+        public static final String KEY_PASSWORD="password";
+        public static final String LOGIN_SUCCESS="success";
+        public static final String SHARED_PREF_NAME="tourist";
+        public static final String EMAIL_SHARED_PREF="email";
+        public static final String LOGGEDIN_SHARED_PREF="loggedin";
         private final String mEmail;
         private final String mPassword;
 
@@ -326,16 +354,52 @@ public class LoginActivity extends AppCompatActivity implements LoaderCallbacks<
                 return false;
             }
 
-            for (String credential : DUMMY_CREDENTIALS) {
-                String[] pieces = credential.split(":");
-                if (pieces[0].equals(mEmail)) {
-                    // Account exists, return true if the password matches.
-                    return pieces[1].equals(mPassword);
-                }
-            }
 
+            login();
             // TODO: register the new account here.
             return true;
+        }
+
+        private void login() {
+
+            StringRequest stringRequest = new StringRequest(Request.Method.POST, LOGIN_URL,
+                    new Response.Listener<String>() {
+                        @Override
+                        public void onResponse(String response) {
+                            if(response.trim().equalsIgnoreCase(LOGIN_SUCCESS)){
+
+                                SharedPreferences sharedPreferences = LoginActivity.this.getSharedPreferences(SHARED_PREF_NAME, Context.MODE_PRIVATE);
+
+                                SharedPreferences.Editor editor = sharedPreferences.edit();
+
+                                editor.putBoolean(LOGGEDIN_SHARED_PREF, true);
+                                editor.putString(EMAIL_SHARED_PREF, mEmail);
+
+                                editor.commit();
+
+                                Intent intent = new Intent(LoginActivity.this, FirstActivity.class);
+                                startActivity(intent);
+                            }else{
+                                Toast.makeText(LoginActivity.this, "Invalid username or password", Toast.LENGTH_LONG).show();
+                            }
+                        }
+                    },
+                    new Response.ErrorListener() {
+                        @Override
+                        public void onErrorResponse(VolleyError error) {
+                        }
+                    }){
+                @Override
+                protected Map<String, String> getParams() throws AuthFailureError {
+                    Map<String,String> prams = new HashMap<>();
+                    prams.put(KEY_EMAIL, mEmail);
+                    prams.put(KEY_PASSWORD, mPassword);
+
+                    return prams;
+                }
+            };
+            RequestQueue requestQueue = Volley.newRequestQueue(LoginActivity.this);
+            requestQueue.add(stringRequest);
         }
 
         @Override
