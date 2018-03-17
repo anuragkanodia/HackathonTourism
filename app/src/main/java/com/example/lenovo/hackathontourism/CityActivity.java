@@ -1,8 +1,11 @@
 package com.example.lenovo.hackathontourism;
 
 import android.app.ActionBar;
+import android.content.Intent;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.view.View;
+import android.widget.ImageView;
 import android.widget.Toolbar;
 
 public class CityActivity extends AppCompatActivity {
@@ -15,6 +18,16 @@ public class CityActivity extends AppCompatActivity {
 
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
+
+        ImageView mJaipur = (ImageView) findViewById(R.id.imageView3);
+        mJaipur.setOnClickListener(new View.OnClickListener() {
+
+            @Override
+            public void onClick(View v) {
+                Intent jaipur = new Intent(CityActivity.this,CityJaipur.class);
+                startActivity(jaipur);
+            }
+        });
 
 
     }

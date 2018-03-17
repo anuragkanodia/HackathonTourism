@@ -32,6 +32,25 @@
             </intent-filter>
         </activity>
         <activity android:name=".CityJaipur" />
+        <activity
+            android:name=".HawaMahal"
+            android:label="@string/title_activity_hawa_mahal"
+            android:theme="@style/AppTheme.NoActionBar" />
+        <activity
+            android:name=".JalMahal"
+            android:label="@string/title_activity_jal_mahal"
+            android:theme="@style/AppTheme.NoActionBar" />
+        <activity
+            android:name=".AlbertHallMuseum"
+            android:label="@string/title_activity_albert_hall_museum"
+            android:theme="@style/AppTheme.NoActionBar" />
+        <activity
+            android:name=".JantarMantar"
+            android:label="@string/title_activity_jantar_mantar"
+            android:theme="@style/AppTheme.NoActionBar" />
+        <activity android:name=".QRCodeGeneration">
+
+        </activity>
         <activity android:name=".RegisterActivity"></activity>
     </application>
 
